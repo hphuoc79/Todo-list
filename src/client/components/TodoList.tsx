@@ -1,6 +1,12 @@
 import type { SVGProps } from 'react'
+import type { TabType } from '@/pages'
 
 import * as Checkbox from '@radix-ui/react-checkbox'
+import { useQueryClient } from '@tanstack/react-query'
+import { getQueryKey } from '@trpc/react-query'
+import clsx from 'clsx'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
+// import { useState, useEffect } from 'react'
 
 import { api } from '@/utils/client/api'
 
@@ -63,31 +69,78 @@ import { api } from '@/utils/client/api'
  *  - https://auto-animate.formkit.com
  */
 
-export const TodoList = () => {
+type TodoListProps = {
+  tabType: TabType
+}
+
+export const TodoList = ({ tabType }: TodoListProps) => {
+  const queryClient = useQueryClient()
+  const [parent] = useAutoAnimate({})
+
   const { data: todos = [] } = api.todo.getAll.useQuery({
-    statuses: ['completed', 'pending'],
+    statuses: tabType === 'all' ? ['pending', 'completed'] : [tabType],
+  })
+
+  const { mutate: updateTodo } = api.todoStatus.update.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries(getQueryKey(api.todo.getAll))
+    },
+  })
+
+  const { mutate: deleteTodo } = api.todo.delete.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries(getQueryKey(api.todo.getAll))
+    },
   })
 
   return (
-    <ul className="grid grid-cols-1 gap-y-3">
-      {todos.map((todo) => (
-        <li key={todo.id}>
-          <div className="flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm">
-            <Checkbox.Root
-              id={String(todo.id)}
-              className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
+    <ul ref={parent} className="mt-4 grid grid-cols-1 gap-y-3">
+      {todos.length !== 0 &&
+        todos.map((todo) => (
+          <li key={todo.id}>
+            <div
+              className={clsx(
+                'flex items-center justify-between rounded-12 border border-gray-200 px-4 py-3 shadow-sm',
+                todo.status === 'pending' ? '' : 'bg-[#E2E8F0] line-through'
+              )}
             >
-              <Checkbox.Indicator>
-                <CheckIcon className="h-4 w-4 text-white" />
-              </Checkbox.Indicator>
-            </Checkbox.Root>
+              <div className="flex items-center  ">
+                <Checkbox.Root
+                  id={String(todo.id)}
+                  checked={todo.status === 'completed' ? true : false}
+                  onCheckedChange={(e) =>
+                    updateTodo({
+                      todoId: todo.id,
+                      status: e === true ? 'completed' : 'pending',
+                    })
+                  }
+                  className={clsx([
+                    'flex h-6 w-6 items-center justify-center ',
+                    'rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none',
+                    'data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700',
+                  ])}
+                >
+                  <Checkbox.Indicator>
+                    <CheckIcon className="h-4 w-4 text-white" />
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
 
-            <label className="block pl-3 font-medium" htmlFor={String(todo.id)}>
-              {todo.body}
-            </label>
-          </div>
-        </li>
-      ))}
+                <label
+                  className="block pl-3 font-medium"
+                  htmlFor={String(todo.id)}
+                >
+                  {todo.body}
+                </label>
+              </div>
+              <button onClick={() => deleteTodo({ id: todo.id })}>
+                <XMarkIcon
+                  id={String(todo.id)}
+                  className="h-6 w-6 cursor-pointer"
+                ></XMarkIcon>
+              </button>
+            </div>
+          </li>
+        ))}
     </ul>
   )
 }

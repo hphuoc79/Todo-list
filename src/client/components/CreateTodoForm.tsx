@@ -1,4 +1,5 @@
 import { useState } from 'react'
+// import { useRef } from 'react'
 
 import { api } from '@/utils/client/api'
 
@@ -26,6 +27,8 @@ import { api } from '@/utils/client/api'
 export const CreateTodoForm = () => {
   const [todoBody, setTodoBody] = useState('')
 
+  // const todoBodyRef = useRef<HTMLInputElement>(null)
+
   const apiContext = api.useContext()
 
   const { mutate: createTodo, isLoading: isCreatingTodo } =
@@ -35,8 +38,22 @@ export const CreateTodoForm = () => {
       },
     })
 
+  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault()
+  //   if (!todoBodyRef.current) {
+  //     return
+  //   }
+  //   createTodo({ body: todoBodyRef.current.value })
+  //   todoBodyRef.current.value = ''
+  // }
+
   return (
-    <form className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-4 focus-within:border-gray-400">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+      }}
+      className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-4 focus-within:border-gray-400"
+    >
       <label htmlFor={TODO_INPUT_ID} className="sr-only">
         Add todo
       </label>
@@ -44,23 +61,36 @@ export const CreateTodoForm = () => {
       <input
         id={TODO_INPUT_ID}
         type="text"
+        // ref={todoBodyRef}
         placeholder="Add todo"
         value={todoBody}
         onChange={(e) => {
           setTodoBody(e.target.value)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && todoBody !== '') {
+            createTodo({
+              body: todoBody,
+            })
+            setTodoBody('')
+          }
         }}
         className="flex-1 px-4 text-base placeholder:text-gray-400 focus:outline-none"
       />
 
       <button
         type="button"
+        // type="submit"
         disabled={isCreatingTodo}
         onClick={() => {
-          createTodo({
-            body: todoBody,
-          })
-          setTodoBody('')
+          if (todoBody !== '') {
+            createTodo({
+              body: todoBody,
+            })
+            setTodoBody('')
+          }
         }}
+        className=" flex items-center  justify-center gap-2 rounded-[9999px] bg-[#334155] px-5 py-2 text-white "
       >
         Add
       </button>
